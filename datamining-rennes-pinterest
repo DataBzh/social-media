@@ -1,0 +1,211 @@
+#Blog post : http://data-bzh.fr/datamining-rennes-pinterest/
+
+library(rpinterest)
+library(ggplot2)
+library(magrittr)
+library(lubridate)
+library(tm)
+comptes <- c("bibliothequeUR2", "lairedu", "operaderennes", "rennesmetropole", "renneswebtv", "veilledoc_r2", "rennescoeur", "tourismerennes", "rennestv", "busanterennes")
+token <- "AS5KV4qDonFqBYQt1TxGE_ILyHTMFGsSrFZPQm1DRq_4-4AoWQAAAAA"
+
+#Aperçu des 10 comptes
+##Épingles, tableaux et abonnés
+comptesID <- lapply(comptes, UserSpecByName, token = token) %>%
+  do.call(rbind, .)
+comptesID$created_at <- ymd_hms(comptesID$created_at)
+ggplottheme <- theme(axis.text=element_text(size=10),
+                     axis.title=element_text(size=15),
+                     title=element_text(size=18),
+                     plot.title=element_text(margin=margin(0,0,20,0), size=18),
+                     axis.title.x=element_text(margin=margin(20,0,0,0)),
+                     axis.title.y=element_text(margin=margin(0,20,0,0)),
+                     legend.text=element_text(size = 12),
+                     plot.margin=margin(20,20,20,20), 
+                     panel.background = element_rect(fill = "white"), 
+                     panel.grid.major = element_line(colour = "grey")) 
+
+ggplot(data = comptesID, aes(x = boards, y = pins)) + 
+  geom_point(data = comptesID, aes(size = followers), color = "#973232") + 
+  geom_text(data = comptesID, aes(x = boards, y = pins,label = names), check_overlap = TRUE, nudge_y = -6, nudge_x = +1) + 
+  ggtitle("Pins, boards et followers") +
+  xlab("Nombre de boards") + 
+  ylab("Nombre de pins") +
+  ggplottheme
+
+mean(comptesID$pins)
+mean(comptesID$followers)
+mean(comptesID$boards)
+
+##Abonnés et abonnements
+ggplot(data = comptesID, aes(x = following, y = followers)) + 
+  geom_point(color = "#973232", size = 3) + 
+  geom_text(data = comptesID, aes(x = following, y = followers, label = names), check_overlap = TRUE, nudge_y = -6, nudge_x = +1) + 
+  ggtitle("Followers et Following") +
+  xlab("Following") + 
+  ylab("Followers") +
+  ggplottheme
+
+##Date de création des comptes
+comptesID$age <- round((Sys.time() - comptesID$created_at), digits = 0)
+
+ggplot(data = comptesID, aes(x = reorder(names, age), y = age)) + 
+  geom_bar(stat = "identity", fill = "#973232") + 
+  coord_flip() +
+  ggtitle("Date de création des comptes") +
+  xlab("Nom du compte") + 
+  ylab("Age (en jours)") +
+  ggplottheme
+
+mean(comptesID$age)
+
+#Les boards
+boards <- c("498984902403051041", "498984902403158509", "498984902403206385", "498984902403225166", 
+            "468093023708877077", "468093023708882603", "468093023708984894", "468093023708987378", "468093023708987382",
+            "366550925860435251", "366550925860435252", "366550925860435253", "366550925860454474", 
+            "366550925860504877", "366550925860504878", "366550925860520858", "366550925860520865", "366550925860522599", 
+            "287104613684069133", "293367431915749305", "293367431915749306", "60939469896826638",
+            "60939469896826640", "60939469896840677", "60939469896861419", "286049082521208734", 
+            "286049082521208733","286049082521208406", "286049082521224641", "286049082521196095",
+            "286049082521231440", "524599125283468967", "524599125283561512", "524599125283558223", 
+            "524599125283669573", "447615719153080842", "447615719153081118", "447615719153081122", 
+            "447615719153095253", "522347325469870556", "522347325469921246", "522347325469921305", 
+            "522347325469961212", "522347325469961649", "522347325469968099", "522347325469968183",
+            "522347325469970838", "522347325469970840", "522347325469970842", "522347325470037721", 
+            "522347325470037722", "522347325470038031", "522347325470038081", "522347325470047157", 
+            "522347325470117790", "522347325470131442", "522347325470134522", "522347325470143721", 
+            "522347325470173612", "522347325470173916", "522347325470175686", "522347325470175688", 
+            "522347325470175689", "522347325470185115", "522347325470185116", "522347325470185120", 
+            "522347325470185125", "522347325470186642", "522347325470196068", "522347325470197305", 
+            "522347325470206468", "522347325470185123", "522347325469966655")
+
+boardpins <- lapply(boards, rpinterest::BoardPinsByID, token = "AZlJz_59Exqdbh8NOKRlZq8f4NiKFGuvhpfsSQ1DRq_4-4AoWQAAAAA") %>%
+  do.call(rbind, .)
+
+boardID <- lapply(boards, rpinterest::BoardSpecByID, token = "AZlJz_59Exqdbh8NOKRlZq8f4NiKFGuvhpfsSQ1DRq_4-4AoWQAAAAA") %>%
+  do.call(rbind, .)
+
+boardID$created_at <- ymd_hms(boardID$created_at)
+boardID$full_name <- paste0(boardID$creator_first_name, " ", boardID$full_name)
+
+ggplot(dplyr::arrange(boardID, desc(pins_count))[1:10,] , aes(x= reorder(name, pins_followers), y=pins_followers, fill = full_name)) + 
+  geom_bar(stat="identity")+ 
+  scale_fill_manual(values = palette, guide = guide_legend(title = "Compte")) +
+  xlab(" ") + 
+  ylab("Nombre de pins") + 
+  coord_flip() +
+  ggtitle("Les 10 tableaux avec le plus d'épingles") +
+  ggplottheme
+
+mean(boardpins$pins_likes)
+mean(boardpins$pins_comments)
+
+##Les mots les plus utilisés dans les descriptions des boards sont :
+
+message <- as.vector(boardID$board_desc)
+messagem <- stringr::str_replace_all(message, "[^[:alnum:]]", " ")
+messages <- gsub('http.*\\s*', '', messagem)
+messageVS <- VectorSource(messages)
+corpus <- Corpus(messageVS)
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeWords, stopwords("french"))
+corpus <- tm_map(corpus, removeWords, c("www", "http", "https", "utm", "bit"))
+corpus <- tm_map(corpus, removeWords, c("rennes", "quoi", "via"))
+TDM <- TermDocumentMatrix(corpus)
+matrixFrenchCourt <- as.matrix(TDM)
+sortedmatrix <- sort(rowSums(matrixFrenchCourt),decreasing=TRUE)
+frequence <- data.frame(word = names(sortedmatrix),freq=sortedmatrix)
+rownames(frequence) <- (1:nrow(frequence))
+tete <- head(frequence, 25)
+palette <- c("#973232", "#1E5B5B", "#6D8D2F", "#287928", "#E18C8C", "#548787", "#B8D283", "#70B470", "#B75353", "#326E6E", "#8CAA4E", "#439243", "#711515", "#0D4444", "#4D6914", "#115A11", "#490101", "#012C2C", "#2E4401", "#013A01")
+wordcloud::wordcloud(frequence$word, frequence$freq, max.words=300,rot.per=FALSE, colors= palette,random.color = FALSE)
+
+tete$word <- factor(tete$word, levels = tete$word[order(tete$freq)])
+
+ggplot(tete, aes(x= word, y=freq)) + 
+  geom_bar(stat="identity", fill= "#973232")+ 
+  scale_fill_manual(values = palette, guide = guide_legend(title = "Compte")) +
+  xlab(" ") + 
+  ylab(" ") + 
+  coord_flip() +
+  ggtitle("Les mots les plus fréquents dans les descriptions des boards") +
+  ggplottheme
+
+#Les épingles
+
+##Text-mining des descriptions des épingles  :
+
+message <- as.vector(boardpins$pin_note)
+messagem <- stringr::str_replace_all(message, "[^[:alnum:]]", " ")
+messages <- gsub('http.*\\s*', '', messagem)
+messageVS <- VectorSource(messages)
+corpus <- Corpus(messageVS)
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeWords, stopwords("french"))
+corpus <- tm_map(corpus, removeWords, c("www", "http", "https", "utm", "bit"))
+corpus <- tm_map(corpus, removeWords, c("rennes", "quoi", "via"))
+TDM <- TermDocumentMatrix(corpus)
+matrixFrenchCourt <- as.matrix(TDM)
+sortedmatrix <- sort(rowSums(matrixFrenchCourt),decreasing=TRUE)
+frequence <- data.frame(word = names(sortedmatrix),freq=sortedmatrix)
+rownames(frequence) <- (1:nrow(frequence))
+tete <- head(frequence, 25)
+#barplot(height=tete$freq, names.arg=tete$word, xlab="Mots", ylab="Fréquence", col="#973232", main="Text-mining de #Rennes en Juin")
+palette <- c("#973232", "#1E5B5B", "#6D8D2F", "#287928", "#E18C8C", "#548787", "#B8D283", "#70B470", "#B75353", "#326E6E", "#8CAA4E", "#439243", "#711515", "#0D4444", "#4D6914", "#115A11", "#490101", "#012C2C", "#2E4401", "#013A01")
+wordcloud::wordcloud(frequence$word, frequence$freq, max.words=300,rot.per=FALSE, colors= palette,random.color = FALSE)
+
+tete$word <- factor(tete$word, levels = tete$word[order(tete$freq)])
+ggplot(tete, aes(x= word, y=freq)) + 
+  geom_bar(stat="identity", fill= "#973232")+ 
+  scale_fill_manual(values = palette, guide = guide_legend(title = "Compte")) +
+  xlab(" ") + 
+  ylab(" ") + 
+  coord_flip() +
+  ggtitle("Les mots les plus fréquents dans les descriptions des pins") +
+  ggplottheme
+
+##Mots les plus fréquents dans les descriptionsLes couleurs les plus utilisées sur les épingles sont :
+
+colors <- as.data.frame(sort(table(boardpins$pin_color), decreasing = TRUE), stringsAsFactors = FALSE)
+ggplot(data = colors[1:10,], aes(x = reorder(Var1, Freq), y = Freq, fill = Var1)) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_manual(values = colors$Var1, guide = "none") + 
+  coord_flip() +
+  ggtitle("Couleurs les plus fréquentes") +
+  xlab(" ") + 
+  ylab("Volume") +
+  ggplottheme
+
+##Liens les plus fréquents :
+
+ggplot(data = as.data.frame(sort(table(boardpins$link), decreasing = TRUE, na.last = NA))[1:10,], aes(x = reorder(Var1, Freq), y = Freq)) + 
+  geom_bar(stat = "identity", fill = "#973232") + 
+  coord_flip() +
+  ggtitle("Liens les plus fréquentes") +
+  xlab(" ") + 
+  ylab("Volume") +
+  ggplottheme
+
+boardpins$link <- gsub("http://", replacement = "", boardpins$original_link )
+boardpins$link  <- gsub("https://", replacement = "", boardpins$link )
+boardpins$link  <- gsub("www.", replacement = "", boardpins$link )
+boardpins$link  <- gsub("/.*", "", boardpins$link )
+boardpins$link  <- gsub(" ", "NA", boardpins$link )
+
+#Âge des tableaux et volume d'épingles
+
+boardID$age <- round((Sys.time() - boardID$created_at), digits = 0)
+
+ggplot(boardID, aes(x= age, y =  pins_count, color = full_name)) + 
+  geom_point(size = 4)+ 
+  scale_color_manual(values = palette, guide = guide_legend(title = "Compte")) +
+  geom_smooth(inherit.aes = FALSE, aes(x= age, y =  pins_count), se = FALSE) +
+  xlab("Âge") + 
+  ylab("Nombre de pins") + 
+  ggtitle("Âge des tableaux en jours et volume d'épingles") +
+  ggplottheme
