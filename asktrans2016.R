@@ -1,20 +1,11 @@
 library(twitteR)
 library(magrittr)
-setup_twitter_oauth("Ibc3iIkCCnkiBpv97XFbHia4g", "EUErcX0AQksc031P3C2qcoTjQBevm2pCSPmnIw55RxQn9IHzCe", "84618490-BpSmqfwIWx6ZkeFDVg6FDZ7eLUs9MRrzdBPzuc1YT", "EWXOpTjIpqM8EmHCGHd51xGQdKFeCsUfeqWk5NgPtLIRi")
+setup_twitter_oauth("", "", "", "")
 hashtag <- "#AskTrans2016"
-path <- paste0(getwd(),"/", hashtag,".RData")
-if(file.exists(path)){
-  load(path)
-}else{
-  data <- data.frame()
-}
-srch <- searchTwitter(hashtag, n=500) %>%
+srch <- searchTwitter(hashtag, n=1500) %>%
   twListToDF() %>% 
   unique() 
-if(nrow(srch) != 0){
-  data <- rbind(data, srch)
-}
-data <- unique(data)
+data <- unique(srch)
 save(data, file = path)
 
 library(lubridate)
@@ -39,6 +30,7 @@ ggplot(data, aes(x = created_day)) +
   geom_bar(fill = "#973232") +
   xlab("Jour") +
   ylab("Volume") +
+  ggtitle("Tweets par jour avec #AskTrans2016") +
   ggtheme
 
 length(unique(data$screenName))
@@ -49,6 +41,7 @@ ggplot(users[1:10,], aes(x = reorder(Var1, Freq), y = Freq)) +
   coord_flip() +
   xlab("") +
   ylab("") +
+  ggtitle("Twittos les plus vus sur #AskTrans2016") +
   ggtheme
 
 nonrt <- subset(data, isRetweet == FALSE)
@@ -60,6 +53,7 @@ ggplot(usersnonrt, aes(x = reorder(Var1, Freq), y = Freq)) +
   coord_flip() +
   xlab("") +
   ylab("") +
+  ggtitle("Twittos ayant tweeté une fois ou plus #AskTrans2016") +
   ggtheme
 
 per <- subset(data, created >= ymd_hms("2016-11-03 17:00:00") & created <= ymd_hms("2016-11-03 19:00:00")) %>%
@@ -84,4 +78,5 @@ ggplot(transsource, aes(x = reorder(Var1, Freq), y = Freq)) +
   coord_flip() +
   xlab("") +
   ylab("") +
+  ggtitle("Source de publication de @TransMusicales") + 
   ggtheme
