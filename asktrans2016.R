@@ -6,7 +6,6 @@ srch <- searchTwitter(hashtag, n=1500) %>%
   twListToDF() %>% 
   unique() 
 data <- unique(srch)
-save(data, file = path)
 
 library(lubridate)
 library(ggplot2)
