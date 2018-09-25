@@ -1,0 +1,140 @@
+---
+title: '#Space2018 — revue de tweets'
+author: "Colin Fay"
+date: "25/09/2018"
+output: 
+  html_document: 
+    df_print: kable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+df <- read_csv("space2018.csv")
+df <- df %>%
+  mutate(time = lubridate::dmy_hms(time), 
+         jour = as.Date(time)) %>%
+  filter(jour > "2018-09-08", jour < "2018-09-17") %>%
+  mutate(entities_str = map(entities_str, jsonlite::fromJSON))
+source("data-bzh-tools-master/main.R")
+```
+
+## Tour d'horizon en dataviz de l'activité Twitter pendant le Space 2018 
+
+<--more--!>
+
+### Space 2018
+
+Le Space 2018, salon international de l'élevage, s'est tenu à Rennes du 11 au 14 septembre 2018. Aperçu en data de l'activité Twitter autour de l'événement. 
+
+### À propos des données
+
+Les données ont été collectées via l'outil [TAGs](https://tags.hawksey.info/get-tags/). Nous les avons filtrées sur une période allant de deux jours avant à deux jours après la conférence (soit du 9 au 16 septembre). Soit un total de 5700 Tweets, répartis sur 8 jours. 
+
+### Répartition temporelle 
+
+Voici le nombre de tweets par jour, sur la période : 
+
+```{r}
+count(df, jour)
+```
+
+On constate, sans grosse surprise, un gros pic pendant le salon, avec une forte présence sociale le 11, puis une baisse le 12, 13 et 14.
+
+Comment se répartissent les tweets dans la journée, pendant le salon ? 
+
+```{r eval = FALSE}
+df %>% 
+  filter(jour >"2018-09-10", jour < "2018-09-15	") %>%
+  mutate(time = lubridate::hour(time)) %>%
+  ggplot(aes(time)) +
+  geom_bar(fill = databzh$colour1) + 
+  facet_grid(jour ~ .) + 
+  labs(
+    title = "Tweets par heure", 
+    x = "heure", 
+    y = "volume",
+    subtitle = "Données via Twitter",
+    caption  = "http://data-bzh.fr"
+  ) + 
+  databzhTheme()
+
+````
+
+### Les twittos 
+
+#### Qui sont les twittos les plus actifs ? 
+
+```{r eval = FALSE}
+df %>% 
+  count(from_user, sort = TRUE) %>% 
+  top_n(10) %>%
+  ggplot(aes(reorder(from_user, n), n)) + 
+  geom_col(fill = databzh$colour2) + 
+  coord_flip() +
+    labs(
+    title = "Nombre de tweets sur la période", 
+    x = "Compte", 
+    y = "volume",
+    subtitle = "Données via Twitter",
+    caption  = "http://data-bzh.fr"
+  ) + 
+  databzhTheme()
+```
+
+Ici, en tête de gondole, trois comptes liés de près à l'événement : la Chambres d'agriculture de Bretagne, le département Physiologie Animale et Systèmes d'élevage, et le compte officiel du Space.
+
+#### Qui sont les plus "influents" (avec le plus de followers ? )
+
+```{r}
+df %>%
+  group_by(from_user) %>%
+  summarise(followers = round(mean(user_followers_count)), nombre_de_tweets = n()) %>%
+  top_n(10, followers) %>%
+  arrange(desc(followers))
+```
+
+#### Les plus cités ?
+
+Qui sont les 10 comptes les plus cités de notre corpus ?
+
+```{r}
+df %>%
+  mutate(quotes = map(entities_str, 1), 
+         quotes = map(entities_str, "user_mentions")) %>%
+  pull(quotes) %>% 
+  bind_rows() %>%
+  count(name, sort = TRUE) %>% 
+  top_n(10)
+```
+
+Nous voyons que le compte du Space est celui qui a été le plus cité (et de loin).
+
+### Hashtags
+
+Les hashtags les plus présents sont les suivants (en excluant "space2018"):
+
+```{r eval = FALSE}
+df %>%
+  mutate(quotes = map(entities_str, 1), 
+         quotes = map(entities_str, "hashtags")) %>%
+  pull(quotes) %>% 
+  bind_rows() %>%
+  mutate(text = tolower(text)) %>% 
+  filter(text != "space2018") %>% 
+  count(text, sort = TRUE) %>% 
+  top_n(10) %>%
+  ggplot(aes(reorder(text, n), n)) + 
+  geom_col(fill = databzh$colour3) + 
+  coord_flip() +
+    labs(
+    title = "Hashtags les plus présents", 
+    x = "hashtags", 
+    y = "volume",
+    subtitle = "Données via Twitter",
+    caption  = "http://data-bzh.fr"
+  ) + 
+  databzhTheme()
+```
+
+
